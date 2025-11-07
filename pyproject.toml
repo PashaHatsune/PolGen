@@ -1,0 +1,21 @@
+[project]
+name = "polgen-1"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "edge-tts>=7.2.3",
+    "einops>=0.8.1",
+    "faiss-cpu>=1.12.0",
+    "gdown>=5.2.0",
+    "librosa>=0.11.0",
+    "local-attention>=1.11.2",
+    "numpy>=2.3.4",
+    "omegaconf>=2.3.0",
+    "polflashsr>=0.0.2",
+    "scipy>=1.16.3",
+    "tdqm>=0.0.1",
+    "torchcrepe>=0.0.24",
+    "torchfcpe>=0.0.4",
+]
