@@ -2,8 +2,6 @@ import asyncio
 import gc
 import os
 
-import edge_tts
-import gradio as gr
 import numpy as np
 import torch
 
@@ -26,9 +24,11 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Инициализация конфигурации
 config = Config()
 
+def progress(value, desc=""):
+    print(f"{value*100:.0f}% | {desc}")
 
 # Отображает прогресс выполнения задачи.
-def display_progress(percent, message, is_print, progress=gr.Progress()):
+def display_progress(percent, message, is_print):
     if is_print:
         print(message)
     progress(percent, desc=message)
@@ -87,16 +87,6 @@ def get_vc(model_path):
     return cpt, version, net_g, tgt_sr, vc, use_f0
 
 
-# Синтезирует текст в речь с использованием edge_tts.
-async def text_to_speech(voice, text, rate, volume, pitch, output_path):
-    if not -100 <= rate <= 100 or not -100 <= volume <= 100 or not -100 <= pitch <= 100:
-        raise ValueError("Параметры Rate, Volume и Pitch должны быть в диапазоне от -100 до +100.")
-
-    communicate = edge_tts.Communicate(voice=voice, text=text, rate=f"{rate:+d}%", volume=f"{volume:+d}%", pitch=f"{pitch:+d}Hz")
-    await communicate.save(output_path)
-
-
-# Выполнение инференса с использованием RVC
 def rvc_infer(
     rvc_model=None,
     input_path=None,
@@ -116,7 +106,6 @@ def rvc_infer(
     audio_upscaling=False,  # FlashSR
     stereo_sound=False,
     output_format="wav",
-    progress=gr.Progress(track_tqdm=True),
 ):
     if not rvc_model:
         raise ValueError("Не выбрана модель для RVC-инференса")
@@ -138,7 +127,7 @@ def rvc_infer(
     # Построение имени выходного файла
     base_name = os.path.splitext(os.path.basename(input_path))[0]
     if len(base_name) > 50:
-        gr.Warning("Имя файла превышает 50 символов и будет сокращено для удобства.")
+        print("Имя файла превышает 50 символов и будет сокращено для удобства.")
         base_name = "Made_in_PolGen"  # Сменить имя файла, если длина исходного более 50 символов
     output_path = os.path.join(OUTPUT_DIR, f"{base_name}_({rvc_model}).{output_format}")
 
@@ -183,67 +172,14 @@ def rvc_infer(
     del hubert_model, cpt, net_g, vc
     gc.collect()
     torch.cuda.empty_cache()
-
     display_progress(1.0, f"[✅] Преобразование завершено — {output_path}", True)
-    return gr.Audio(output_path, label=os.path.basename(output_path))
+    return output_path
 
 
-def rvc_edgetts_infer(
-    # RVC
-    rvc_model=None,
-    f0_method="rmvpe",
-    f0_min=50,
-    f0_max=1100,
-    rvc_pitch=0,
-    protect=0.5,
-    index_rate=0,
-    volume_envelope=1,
-    autopitch=False,
-    autopitch_threshold=155.0,
-    autotune=False,
-    autotune_tonic="C",
-    autotune_scale="chromatic",
-    autotune_strength=1.0,
-    stereo_sound=False,
-    output_format="wav",
-    # EdgeTTS
-    tts_voice=None,
-    tts_text=None,
-    tts_rate=0,
-    tts_volume=0,
-    tts_pitch=0,
-    # FlashSR
-    audio_upscaling=False,
-    progress=gr.Progress(track_tqdm=True),
-):
-    if not tts_text:
-        raise ValueError("Введите текст!")
-    if not tts_voice:
-        raise ValueError("Выберите голос!")
 
-    display_progress(1.0, "[🎙️] Синтезируем речь...", False)
-    input_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
-    asyncio.run(text_to_speech(tts_voice, tts_text, tts_rate, tts_volume, tts_pitch, input_path))
 
-    output_path = rvc_infer(
-        rvc_model=rvc_model,
-        input_path=input_path,
-        f0_method=f0_method,
-        f0_min=f0_min,
-        f0_max=f0_max,
-        rvc_pitch=rvc_pitch,
-        protect=protect,
-        index_rate=index_rate,
-        volume_envelope=volume_envelope,
-        autopitch=autopitch,
-        autopitch_threshold=autopitch_threshold,
-        autotune=autotune,
-        autotune_tonic=autotune_tonic,
-        autotune_scale=autotune_scale,
-        autotune_strength=autotune_strength,
-        audio_upscaling=audio_upscaling,
-        stereo_sound=stereo_sound,
-        output_format=output_format,
-    )
-
-    return input_path, output_path
+rvc_infer(
+    rvc_model="mita",
+    input_path="/home/miku/001_вокал.mp3",
+    output_format="mp3"
+)
