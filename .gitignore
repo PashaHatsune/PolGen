@@ -11,3 +11,6 @@
 *.txt
 
 *.ipynb_checkpoints
+.venv
+__pycache__
+.zip
